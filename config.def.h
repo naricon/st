@@ -5,7 +5,7 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Terminus:pixelsize=14:antialias=true:autohint=true";
+static char *font = "Ttyp0:pixelsize=21:antialias=true:autohint=true";
 /* Spare fonts */
 static char *font2[] = {
 	"Symbols Nerd Font:pixelsize=12:antialias=true:autohint=true"
@@ -106,29 +106,27 @@ char *termname = "st-256color";
 unsigned int tabspaces = 8;
 
 /* bg opacity */
-float alpha = 0.2;
+float alpha = 1;
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
-	/* 8 normal colors */
-	"black",
-	"red3",
-	"green3",
-	"yellow3",
-	"blue2",
-	"magenta3",
-	"cyan3",
-	"gray90",
+    "#181616",
+    "#0d0c0c",
+    "#2d4f67",
+    "#a6a69c",
+    "#7fb4ca",
+    "#c5c9c5",
+    "#938aa9",
+    "#c5c9c5",
 
-	/* 8 bright colors */
-	"gray50",
-	"red",
-	"green",
-	"yellow",
-	"#5c5cff",
-	"magenta",
-	"cyan",
-	"white",
+    "#c4746e",
+    "#e46876",
+    "#c4b28a",
+    "#8a9a7b",
+    "#8ea4a2",
+    "#8ba4b0",
+    "#a292a3",
+    "#7aa89f",
 
 	[255] = 0,
 
@@ -136,7 +134,7 @@ static const char *colorname[] = {
 	"#add8e6", /* 256 -> cursor */
 	"#555555", /* 257 -> rev cursor*/
 	"#000000", /* 258 -> bg */
-	"#e5e5e5", /* 259 -> fg */
+	"#c3bb90", /* 259 -> fg */
 };
 
 /*
