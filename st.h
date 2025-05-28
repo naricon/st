@@ -29,6 +29,10 @@
 #define IS_TRUECOL(x)		(1 << 24 & (x))
 #define HISTSIZE      2000
 
+#define HEX_TO_INT(c)		((c) >= '0' && (c) <= '9' ? (c) - '0' : \
+				(c) >= 'a' && (c) <= 'f' ? (c) - 'a' + 10 : \
+				(c) >= 'A' && (c) <= 'F' ? (c) - 'A' + 10 : -1)
+
 enum glyph_attribute {
 	ATTR_NULL           = 0,
 	ATTR_SET            = 1 << 0,
@@ -43,6 +47,8 @@ enum glyph_attribute {
 	ATTR_WRAP           = 1 << 9,
 	ATTR_WIDE           = 1 << 10,
 	ATTR_WDUMMY         = 1 << 11,
+	ATTR_BOXDRAW        = 1 << 13,
+	ATTR_DIRTYUNDERLINE = 1 << 14,
 	ATTR_LIGA           = 1 << 15,
 	ATTR_SIXEL          = 1 << 16,
 	ATTR_BOLD_FAINT = ATTR_BOLD | ATTR_FAINT,
@@ -57,6 +63,7 @@ typedef struct _ImageList {
 	int height;
 	int x;
 	int y;
+	int reflow_y;
 	int cols;
 	int cw;
 	int ch;
@@ -109,6 +116,8 @@ typedef struct {
 	uint32_t mode;    /* attribute flags */
 	uint32_t fg;      /* foreground  */
 	uint32_t bg;      /* background  */
+	int ustyle;	      /* underline style */
+	int ucolor[3];    /* underline color */
 } Glyph;
 
 typedef Glyph *Line;
@@ -134,9 +143,10 @@ typedef struct {
 	Line *line;   /* screen */
 	Line *alt;    /* alternate screen */
 	Line hist[HISTSIZE]; /* history buffer */
-	int histi;    /* history index */
-	int histn;    /* number of history entries */
-	int scr;      /* scroll back */
+	int histi;           /* history index */
+	int histf;           /* nb history available */
+	int scr;             /* scroll back */
+	int wrapcwidth[2];   /* used in updating WRAPNEXT when resizing */
 	int *dirty;   /* dirtyness of lines */
 	TCursor c;    /* cursor */
 	int ocx;      /* old cursor col */
@@ -166,6 +176,7 @@ typedef union {
 typedef struct {
 	int tw, th; /* tty width and height */
 	int w, h; /* window width and height */
+	int hborderpx, vborderpx;
 	int ch; /* char height */
 	int cw; /* char width  */
 	int mode; /* window state/mode flags */
@@ -180,6 +191,12 @@ typedef struct {
 	GlyphFontSpec *specbuf; /* font spec buffer used for rendering */
 	GlyphFontSeq *specseq;
 	Atom xembed, wmdeletewin, netwmname, netwmiconname, netwmpid;
+	Atom XdndTypeList, XdndSelection, XdndEnter, XdndPosition, XdndStatus,
+	     XdndLeave, XdndDrop, XdndFinished, XdndActionCopy, XdndActionMove,
+	     XdndActionLink, XdndActionAsk, XdndActionPrivate, XtextUriList,
+	     XtextPlain, XdndAware;
+	int64_t XdndSourceWin, XdndSourceVersion;
+	int32_t XdndSourceFormat;
 	struct {
 		XIM xim;
 		XIC xic;
@@ -194,6 +211,7 @@ typedef struct {
 	 * a green rectangle where text would be entered. */
 	Cursor vpointer, bpointer; /* visible and hidden pointers */
 	int pointerisvisible;
+	Cursor upointer;
 	int scr;
 	int isfixed; /* is fixed geometry? */
 	int depth; /* bit depth */
@@ -299,6 +317,14 @@ char *xstrdup(const char *);
 
 int xgetcolor(int x, unsigned char *r, unsigned char *g, unsigned char *b);
 
+int isboxdraw(Rune);
+ushort boxdrawindex(const Glyph *);
+#ifdef XFT_VERSION
+/* only exposed to x.c, otherwise we'll need Xft.h for the types */
+void boxdraw_xinit(Display *, Colormap, XftDraw *, Visual *);
+void drawboxes(int, int, int, int, XftColor *, XftColor *, const XftGlyphFontSpec *, int);
+#endif // XFT_VERSION
+
 /* config.h globals */
 extern char *utmp;
 extern char *scroll;
@@ -313,6 +339,7 @@ extern unsigned int defaultfg;
 extern unsigned int defaultbg;
 extern unsigned int defaultcs;
 
+extern const int boxdraw, boxdraw_bold, boxdraw_braille;
 extern float alpha;
 
 extern DC dc;

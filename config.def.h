@@ -5,14 +5,18 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Ttyp0:pixelsize=21:antialias=true:autohint=true";
+static char *font = "Ttyp0:pixelsize=15:antialias=true:autohint=true";
 /* Spare fonts */
 static char *font2[] = {
-	"Symbols Nerd Font:pixelsize=12:antialias=true:autohint=true"
-//	"Hack Nerd Font Mono:pixelsize=11:antialias=true:autohint=true",
+/*	"Inconsolata for Powerline:pixelsize=12:antialias=true:autohint=true", */
+/*	"Hack Nerd Font Mono:pixelsize=11:antialias=true:autohint=true", */
 };
 
-static int borderpx = 2;
+static int borderpx = 0;
+
+/* modkey options: ControlMask, ShiftMask or XK_ANY_MOD */
+static uint url_opener_modkey = XK_ANY_MOD;
+static char *url_opener = "xdg-open";
 
 /*
  * What program is execed by st depends of these precedence rules:
@@ -76,8 +80,17 @@ static unsigned int blinktimeout = 800;
  */
 static unsigned int cursorthickness = 2;
 
-/* Hide the X cursor whenever a key is pressed. 0: off, 1: on */
-int hidecursor = 1;
+/*
+ * 1: render most of the lines/blocks characters without using the font for
+ *    perfect alignment between cells (U2500 - U259F except dashes/diagonals).
+ *    Bold affects lines thickness if boxdraw_bold is not 0. Italic is ignored.
+ * 0: disable (render all U25XX glyphs normally from the font).
+ */
+const int boxdraw = 0;
+const int boxdraw_bold = 0;
+
+/* braille (U28XX):  1: render as adjacent "pixels",  0: use font */
+const int boxdraw_braille = 0;
 
 /*
  * bell volume. It must be a value between -100 and 100. Use 0 for disabling
@@ -106,29 +119,36 @@ char *termname = "st-256color";
 unsigned int tabspaces = 8;
 
 /* bg opacity */
-float alpha = 1;
+float alpha = 0.9;
+
+/*
+ * drag and drop escape characters
+ *
+ * this will add a '\' before any characters specified in the string.
+ */
+char *xdndescchar = " !\"#$&'()*;<>?[\\]^`{|}~";
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
-  /* 8 normal colors */
-  [0] = "#322a2c", /* black   */
-  [1] = "#79220e", /* red     */
-  [2] = "#344b1b", /* green   */
-  [3] = "#b45b00", /* yellow  */
-  [4] = "#434045", /* blue    */
-  [5] = "#5c1e25", /* magenta */
-  [6] = "#394745", /* cyan    */
-  [7] = "#ae8842", /* white   */
+	/* 8 normal colors */
+	"black",
+	"red3",
+	"green3",
+	"yellow3",
+	"blue2",
+	"magenta3",
+	"cyan3",
+	"gray90",
 
-  /* 8 bright colors */
-  [8]  = "#46423b", /* black   */
-  [9]  = "#aa261f", /* red     */
-  [10] = "#76550f", /* green   */
-  [11] = "#b57f02", /* yellow  */
-  [12] = "#908862", /* blue    */
-  [13] = "#624a35", /* magenta */
-  [14] = "#393e38", /* cyan    */
-  [15] = "#a59058", /* white   */
+	/* 8 bright colors */
+	"gray50",
+	"red",
+	"green",
+	"yellow",
+	"#5c5cff",
+	"magenta",
+	"cyan",
+	"white",
 
 	[255] = 0,
 
@@ -136,7 +156,7 @@ static const char *colorname[] = {
 	"#add8e6", /* 256 -> cursor */
 	"#555555", /* 257 -> rev cursor*/
 	"#000000", /* 258 -> bg */
-	"#c3bb90", /* 259 -> fg */
+	"#e5e5e5", /* 259 -> fg */
 };
 
 /*
@@ -165,6 +185,14 @@ static unsigned int cols = 80;
 static unsigned int rows = 24;
 
 /*
+ * Whether to use pixel geometry or cell geometry
+ */
+
+static Geometry geometry = CellGeometry; // or PixelGeometry to use the below size
+static unsigned int width = 564;
+static unsigned int height = 364;
+
+/*
  * Default colour and shape of the mouse cursor
  */
 static unsigned int mouseshape = XC_xterm;
@@ -176,6 +204,43 @@ static unsigned int mousebg = 0;
  * doesn't match the ones requested.
  */
 static unsigned int defaultattr = 11;
+
+/*
+ * Xresources preferences to load at startup
+ */
+ResourcePref resources[] = {
+		{ "font",         STRING,  &font },
+		{ "color0",       STRING,  &colorname[0] },
+		{ "color1",       STRING,  &colorname[1] },
+		{ "color2",       STRING,  &colorname[2] },
+		{ "color3",       STRING,  &colorname[3] },
+		{ "color4",       STRING,  &colorname[4] },
+		{ "color5",       STRING,  &colorname[5] },
+		{ "color6",       STRING,  &colorname[6] },
+		{ "color7",       STRING,  &colorname[7] },
+		{ "color8",       STRING,  &colorname[8] },
+		{ "color9",       STRING,  &colorname[9] },
+		{ "color10",      STRING,  &colorname[10] },
+		{ "color11",      STRING,  &colorname[11] },
+		{ "color12",      STRING,  &colorname[12] },
+		{ "color13",      STRING,  &colorname[13] },
+		{ "color14",      STRING,  &colorname[14] },
+		{ "color15",      STRING,  &colorname[15] },
+		{ "background",   STRING,  &colorname[258] },
+		{ "foreground",   STRING,  &colorname[259] },
+		{ "cursorColor",  STRING,  &colorname[256] },
+		{ "termname",     STRING,  &termname },
+		{ "shell",        STRING,  &shell },
+		{ "minlatency",   INTEGER, &minlatency },
+		{ "maxlatency",   INTEGER, &maxlatency },
+		{ "blinktimeout", INTEGER, &blinktimeout },
+		{ "bellvolume",   INTEGER, &bellvolume },
+		{ "tabspaces",    INTEGER, &tabspaces },
+		{ "borderpx",     INTEGER, &borderpx },
+		{ "cwscale",      FLOAT,   &cwscale },
+		{ "chscale",      FLOAT,   &chscale },
+		{ "alpha",        FLOAT,   &alpha },
+};
 
 /*
  * Force mouse select/shortcuts while mask is active (when MODE_MOUSE is set).
@@ -190,7 +255,7 @@ static uint forcemousemod = ShiftMask;
  */
 static MouseShortcut mshortcuts[] = {
 	/* mask                 button   function        argument       release  screen */
-	{ XK_ANY_MOD,           Button2, clippaste,      {.i = 0},      1 },
+	{ XK_ANY_MOD,           Button2, selpaste,       {.i = 0},      1 },
 	{ ShiftMask,            Button4, ttysend,        {.s = "\033[5;2~"} },
 	{ ShiftMask,            Button5, ttysend,        {.s = "\033[6;2~"} },
 	{ XK_ANY_MOD,           Button4, kscrollup,      {.i = 1},      0, S_PRI },
@@ -226,8 +291,8 @@ static Shortcut shortcuts[] = {
 	{ TERMMOD,              XK_P,           changealpha,     {.f = -0.05} },
 	{ ShiftMask,            XK_Page_Up,     kscrollup,       {.i = -1}, S_PRI },
 	{ ShiftMask,            XK_Page_Down,   kscrolldown,     {.i = -1}, S_PRI },
-	{ TERMMOD,              XK_Y,           clippaste,       {.i =  0} },
-	{ ShiftMask,            XK_Insert,      clippaste,       {.i =  0} },
+	{ TERMMOD,              XK_Y,           selpaste,        {.i =  0} },
+	{ ShiftMask,            XK_Insert,      selpaste,        {.i =  0} },
 	{ TERMMOD,              XK_Num_Lock,    numlock,         {.i =  0} },
 };
 
@@ -501,3 +566,26 @@ static char ascii_printable[] =
 	"@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
 	"`abcdefghijklmnopqrstuvwxyz{|}~";
 
+/**
+ * Undercurl style. Set UNDERCURL_STYLE to one of the available styles.
+ *
+ * Curly: Dunno how to draw it *shrug*
+ *  _   _   _   _
+ * ( ) ( ) ( ) ( )
+ *	 (_) (_) (_) (_)
+ *
+ * Spiky:
+ * /\  /\   /\	/\
+ *   \/  \/	  \/
+ *
+ * Capped:
+ *	_     _     _
+ * / \   / \   / \
+ *    \_/   \_/
+ */
+// Available styles
+#define UNDERCURL_CURLY 0
+#define UNDERCURL_SPIKY 1
+#define UNDERCURL_CAPPED 2
+// Active style
+#define UNDERCURL_STYLE UNDERCURL_CAPPED

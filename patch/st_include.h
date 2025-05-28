@@ -1,2 +1,3 @@
 /* Patches */
-#include "scrollback.h"
+#include "openurlonclick.h"
+#include "reflow.h"
